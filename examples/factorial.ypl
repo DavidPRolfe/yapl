@@ -1,5 +1,8 @@
 fun main() {
     num = 7
+    unused = 14.0
+    secondUnused = 23.
+    third_unused = 19f
 
     factorial = 1
 

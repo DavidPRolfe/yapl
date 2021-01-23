@@ -1,11 +1,13 @@
 use std::fs::File;
+use std::io::{Bytes, Read};
 use utf8_decode::UnsafeDecoder;
-use std::io::{Read, Bytes};
 
 use thiserror::Error;
-use crate::lexer::Lexer;
 
 mod lexer;
+mod token;
+
+use lexer::Lexer;
 
 #[derive(Error, Debug)]
 pub enum CompilerError {
@@ -13,21 +15,23 @@ pub enum CompilerError {
     ReadError(#[from] std::io::Error),
 
     #[error("encountered an error during lexing")]
-    LexError
+    LexError,
 }
-
 
 // FileReader is used to read a stream of chars from a file
 struct FileReader {
     iter: UnsafeDecoder<Bytes<File>>,
-    err: Result<(), std::io::Error>
+    err: Result<(), std::io::Error>,
 }
 
 impl FileReader {
     fn open(path: &str) -> Result<Self, std::io::Error> {
         let file = File::open(path)?;
 
-        Ok(Self { iter: UnsafeDecoder::new(file.bytes()), err: Ok(()) })
+        Ok(Self {
+            iter: UnsafeDecoder::new(file.bytes()),
+            err: Ok(()),
+        })
     }
 }
 
@@ -46,7 +50,7 @@ impl Iterator for &mut FileReader {
     }
 }
 
-pub fn compile(path: &str) -> Result<(), CompilerError>{
+pub fn compile(path: &str) -> Result<(), CompilerError> {
     let mut reader = FileReader::open(&path)?;
 
     let lexer = Lexer::new(&mut reader);
