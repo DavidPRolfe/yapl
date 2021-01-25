@@ -112,7 +112,8 @@ impl<T: Iterator<Item = char>> Lexer<T> {
                     TokenMatch::Identifier(_) | TokenMatch::Int(_) |
                     TokenMatch::Float(_) | TokenMatch::String(_) |
                     TokenMatch::True | TokenMatch::False | TokenMatch::RightParen |
-                    TokenMatch::RightBrace | TokenMatch::Return => {
+                    TokenMatch::RightBrace | TokenMatch::Return | TokenMatch::Continue |
+                    TokenMatch::Break => {
                         self.held_token = Some(Token {
                             token_match: TokenMatch::Semicolon,
                             char: self.char,
