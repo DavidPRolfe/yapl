@@ -1,7 +1,8 @@
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum TokenMatch {
     // Special Tokens
     Illegal(String),
+    Semicolon,
 
     // Literals + Identifier
     Identifier(String),

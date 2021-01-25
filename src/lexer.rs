@@ -7,6 +7,8 @@ pub struct Lexer<T: Iterator<Item = char>> {
     char: usize,
     line: usize,
     newline: bool,
+    last_match: TokenMatch,
+    held_token: Option<Token>
 }
 
 impl<T: Iterator<Item = char>> Lexer<T> {
@@ -16,13 +18,20 @@ impl<T: Iterator<Item = char>> Lexer<T> {
             char: 0,
             line: 1,
             newline: true,
+            last_match: TokenMatch::Semicolon,
+            held_token: None,
         }
     }
 
     fn next_token(&mut self) -> Option<Token> {
+        if let Some(token) = self.held_token.take() {
+            return Some(token);
+        }
+
         while let Some(c) = self.advance() {
-            let token_type = match c {
+            let token_match = match c {
                 c if c.is_whitespace() => continue,
+                ';' => TokenMatch::Semicolon,
                 '(' => TokenMatch::LeftParen,
                 ')' => TokenMatch::RightParen,
                 '{' => TokenMatch::LeftBrace,
@@ -69,13 +78,27 @@ impl<T: Iterator<Item = char>> Lexer<T> {
                 c if c.is_alphabetic() || c == '_' => self.handle_letters(c),
                 _ => TokenMatch::Illegal(c.to_string()),
             };
+            self.last_match = token_match.clone();
+
+            if let Some(token) = self.held_token.take() {
+                self.held_token = Some(Token {
+                    token_match,
+                    char: self.char,
+                    line: self.line,
+                });
+                return Some(token);
+            }
 
             return Some(Token {
-                token_match: token_type,
+                token_match,
                 char: self.char,
                 line: self.line,
             });
         }
+        if let Some(token) = self.held_token.take() {
+            return Some(token);
+        }
+
         None
     }
 
@@ -85,6 +108,19 @@ impl<T: Iterator<Item = char>> Lexer<T> {
         match next {
             None => {}
             Some('\n') => {
+                match self.last_match {
+                    TokenMatch::Identifier(_) | TokenMatch::Int(_) |
+                    TokenMatch::Float(_) | TokenMatch::String(_) |
+                    TokenMatch::True | TokenMatch::False | TokenMatch::RightParen |
+                    TokenMatch::RightBrace | TokenMatch::Return => {
+                        self.held_token = Some(Token {
+                            token_match: TokenMatch::Semicolon,
+                            char: self.char,
+                            line: self.line,
+                        })
+                    }
+                    _ => {}
+                }
                 self.char = 0;
                 self.line += 1;
                 self.newline = true;
