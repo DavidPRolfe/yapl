@@ -5,17 +5,23 @@ use utf8_decode::UnsafeDecoder;
 use thiserror::Error;
 
 mod lexer;
+mod parser;
 mod token;
 
 use lexer::Lexer;
+use parser::{Parser, ParseError};
+use token::Tokens;
 
 #[derive(Error, Debug)]
 pub enum CompilerError {
     #[error(transparent)]
     ReadError(#[from] std::io::Error),
 
-    #[error("encountered an error during lexing")]
-    LexError,
+    #[error("encountered errors during lexing `{0}`")]
+    LexError(Tokens),
+
+    #[error("encountered an error during parsing `{0}`")]
+    ParseError(#[from] ParseError)
 }
 
 // FileReader is used to read a stream of chars from a file
@@ -54,10 +60,10 @@ pub fn compile(path: &str) -> Result<(), CompilerError> {
     let mut reader = FileReader::open(&path)?;
 
     let lexer = Lexer::new(&mut reader);
-    for token in lexer {
-        println!("{:?}", token)
-    }
-    reader.err?;
+
+    let ast = Parser::new(lexer).parse()?;
+
+    print!("{:?}", ast);
 
     Ok(())
 }
