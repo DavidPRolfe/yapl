@@ -1,0 +1,6 @@
+fun main() {
+    num = 7
+    dec = 14.0
+
+    final = num + dec
+}

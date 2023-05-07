@@ -124,6 +124,7 @@ pub enum Primary {
     Int(String),
     Float(String),
     String(String),
+    Identifier(String),
     True,
     False,
     Grouping(Expr),

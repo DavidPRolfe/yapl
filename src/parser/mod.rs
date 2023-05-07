@@ -206,11 +206,12 @@ impl<T: Iterator<Item = Token>> Parser<T> {
         let token = self.next().ok_or(ParseError::EndOfFile)?;
 
         match token.token_type {
-            TokenType::Int(lit) => Ok(Primary::Int(lit)),
+            Int(lit) => Ok(Primary::Int(lit)),
             Float(lit) => Ok(Primary::Float(lit)),
             String(lit) => Ok(Primary::String(lit)),
             True => Ok(Primary::True),
             False => Ok(Primary::False),
+            Identifier(lit) => Ok(Primary::Identifier(lit)),
             LeftParen => {
                 let expr = self.expr()?;
                 let right = self.next().ok_or(ParseError::EndOfFile)?;

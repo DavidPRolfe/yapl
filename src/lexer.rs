@@ -41,19 +41,31 @@ impl<T: Iterator<Item = char>> Lexer<T> {
                 '+' => TokenType::Plus,
                 '*' => TokenType::Star,
                 '<' => match self.peek() {
-                    Some('=') => TokenType::LessEqual,
+                    Some('=') => {
+                        self.advance();
+                        TokenType::LessEqual
+                    },
                     None | Some(_) => TokenType::Less,
                 },
                 '>' => match self.peek() {
-                    Some('=') => TokenType::GreaterEqual,
+                    Some('=') => {
+                        self.advance();
+                        TokenType::GreaterEqual
+                    },
                     None | Some(_) => TokenType::Greater,
                 },
                 '=' => match self.peek() {
-                    Some('=') => TokenType::EqualEqual,
+                    Some('=') => {
+                        self.advance();
+                        TokenType::EqualEqual
+                    },
                     None | Some(_) => TokenType::Equal,
                 },
                 '!' => match self.peek() {
-                    Some('=') => TokenType::BangEqual,
+                    Some('=') => {
+                        self.advance();
+                        TokenType::BangEqual
+                    },
                     None | Some(_) => TokenType::Bang,
                 },
                 '/' => match self.peek() {
@@ -239,3 +251,5 @@ impl<T: Iterator<Item = char>> Iterator for Lexer<T> {
         self.next_token()
     }
 }
+
+mod test {}
