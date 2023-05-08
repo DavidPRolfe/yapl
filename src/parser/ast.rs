@@ -1,6 +1,50 @@
+/*
+planning out future of ast
+
+program        →
+function       → FUN IDENTIFIER "()" block ; // TODO: Can't handle args or multiple funs
+block          → "{" statement* "}" ;
+statement      → ( assignment | expression ) SEMICOLON+
+assignment     →
+expression     → equality ;
+logic_or       → logic_and ( "or" logic_and )* ;
+logic_and      → equality ( "and" equality )* ;
+equality       → comparison ( ( "!=" | "==" ) comparison )* ;
+comparison     → term ( ( ">" | ">=" | "<" | "<=" ) term )* ;
+term           → factor ( ( "-" | "+" ) factor )* ;
+factor         → unary ( ( "/" | "*" ) unary )* ;
+unary          → ( "!" | "-" ) unary | primary ;
+primary        → INT | FLOAT | STRING | reference | "true" | "false" | "(" expression ")" ;
+reference      → IDENT | IDENT"()" # TODO: Need to implement references and function args
+ */
+
 #[derive(Debug)]
 pub enum Expr {
+    LogicOr(LogicOr),
+}
+
+#[derive(Debug)]
+pub enum LogicOrLeft {
+    LogicAnd(LogicAnd),
+    LogicOr(Box<LogicOr>),
+}
+
+#[derive(Debug)]
+pub struct LogicOr {
+    pub left: LogicOrLeft,
+    pub right: Option<LogicAnd>,
+}
+
+#[derive(Debug)]
+pub enum LogicAndLeft {
     Equality(Equality),
+    LogicAnd(Box<LogicAnd>),
+}
+
+#[derive(Debug)]
+pub struct LogicAnd {
+    pub left: LogicAndLeft,
+    pub right: Option<Equality>,
 }
 
 #[derive(Debug)]

@@ -59,7 +59,59 @@ impl<T: Iterator<Item = Token>> Parser<T> {
     }
 
     fn expr(&mut self) -> Result<Expr, ParseError> {
-        Ok(Expr::Equality(self.equality()?))
+        Ok(Expr::LogicOr(self.logic_or()?))
+    }
+
+    fn logic_or(&mut self) -> Result<LogicOr, ParseError> {
+        let mut left = LogicOrLeft::LogicAnd(self.logic_and()?);
+        let mut right: Option<LogicAnd>;
+
+        loop {
+            right = None;
+
+            if let Some(token) = self.next() {
+                match token.token_type {
+                    And => {},
+                    _ => {
+                        self.store(token);
+                        break
+                    }
+                }
+            } else {
+                break
+            }
+
+            right = Some(self.logic_and()?);
+            left = LogicOrLeft::LogicOr(Box::new(LogicOr { left, right }));
+        }
+
+        Ok(LogicOr { left, right })
+    }
+
+    fn logic_and(&mut self) -> Result<LogicAnd, ParseError> {
+        let mut left = LogicAndLeft::Equality(self.equality()?);
+        let mut right: Option<Equality>;
+
+        loop {
+            right = None;
+
+            if let Some(token) = self.next() {
+                match token.token_type {
+                    And => {},
+                    _ => {
+                        self.store(token);
+                        break
+                    }
+                }
+            } else {
+                break
+            }
+
+            right = Some(self.equality()?);
+            left = LogicAndLeft::LogicAnd(Box::new(LogicAnd { left, right }));
+        }
+
+        Ok(LogicAnd { left, right })
     }
 
     fn equality(&mut self) -> Result<Equality, ParseError> {

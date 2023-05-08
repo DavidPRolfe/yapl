@@ -187,6 +187,8 @@ impl<T: Iterator<Item = char>> Lexer<T> {
             "var" => TokenType::Var,
             "break" => TokenType::Break,
             "continue" => TokenType::Continue,
+            "and" => TokenType::And,
+            "or" => TokenType::Or,
 
             _ => TokenType::Identifier(s),
         }

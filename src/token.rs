@@ -47,6 +47,8 @@ pub enum TokenType {
     Var,
     Break,
     Continue,
+    And,
+    Or,
 }
 
 impl fmt::Display for TokenType {
