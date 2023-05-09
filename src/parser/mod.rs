@@ -132,14 +132,22 @@ impl<T: Iterator<Item = Token>> Parser<T> {
             return Err(ParseError::UnexpectedToken(token))
         }
 
-        // TODO: Add arg handling
-
         let token = self.next().ok_or(ParseError::EndOfFile)?;
-        if !matches!(token.token_type, RightParen) {
-            return Err(ParseError::UnexpectedToken(token))
-        }
+        let args = match token.token_type {
+            RightParen => None,
+            _ => {
+                self.store(token);
+                let args = self.args_decl()?;
 
-        Ok(Function { ident, block: self.block()? })
+                let token = self.next().ok_or(ParseError::EndOfFile)?;
+                if !matches!(token.token_type, RightParen) {
+                    return Err(ParseError::UnexpectedToken(token))
+                }
+                Some(args)
+            }
+        };
+
+        Ok(Function { ident, args, block: self.block()? })
     }
 
     fn statement(&mut self) -> Result<Statement, ParseError> {
@@ -191,6 +199,37 @@ impl<T: Iterator<Item = Token>> Parser<T> {
         }
 
         Ok(block)
+    }
+
+    fn args_decl(&mut self) -> Result<ArgsDecl, ParseError> {
+        let token = self.next().ok_or(ParseError::EndOfFile)?;
+        let arg = if let Identifier(ident) = token.token_type {
+            ident
+        } else {
+            return Err(ParseError::UnexpectedToken(token))
+        };
+
+        let mut args = ArgsDecl { args: vec![ast::Identifier(arg)] };
+
+        loop {
+            if let Some(token) = self.next() {
+                if !matches!(token.token_type, Comma) {
+                    self.store(token);
+                    break
+                }
+
+                let token = self.next().ok_or(ParseError::EndOfFile)?;
+                let arg = if let Identifier(ident) = token.token_type {
+                    ident
+                } else {
+                    return Err(ParseError::UnexpectedToken(token))
+                };
+
+                args.args.push(ast::Identifier(arg))
+            } else { break }
+        }
+
+        Ok(args)
     }
 
     // Expressions

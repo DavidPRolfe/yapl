@@ -4,12 +4,14 @@ planning out future of ast
 program        ->  declaration* EOF
 
 declaration    ->  function | var | statement
-function       ->  FUN IDENTIFIER "()" block   // TODO: Can't handle args or multiple funs
+function       ->  FUN IDENTIFIER "(" arg_decl? ")" block
 var            ->  ( "val" | "var" ) IDENT "=" expression ";"*
 statement      ->  expression | for | loop | print | return
 
 // Misc
 block          ->  "{" declaration* "}"
+args_decl      ->  IDENT ("," IDENT )*
+args           ->  expression ("," expression)*
 
 // Expressions
 expression     ->  assignment ";"*
@@ -22,7 +24,7 @@ term           ->  factor ( ( "-" | "+" ) factor )*
 factor         ->  unary ( ( "/" | "*" ) unary )*
 unary          ->  ( "!" | "-" ) unary | primary
 primary        ->  INT | FLOAT | STRING | call | "true" | "false" | "(" expression ")"
-call           ->  IDENT"()" | IDENT # TODO: Need to implement function args
+call           ->  IDENT"(" args? ")" | IDENT # TODO: Need to implement call args
  */
 
 // Declarations
@@ -40,9 +42,14 @@ pub enum Declaration {
 }
 
 #[derive(Debug)]
+pub struct ArgsDecl {
+    pub args: Vec<Identifier>,
+}
+
+#[derive(Debug)]
 pub struct Function {
-    // TODO: Add args
     pub ident: Identifier,
+    pub args: Option<ArgsDecl>,
     pub block: Block,
 }
 
