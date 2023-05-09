@@ -9,7 +9,7 @@ mod parser;
 mod token;
 
 use lexer::Lexer;
-use parser::{Parser, ParseError};
+use parser::{ParseError, Parser};
 use token::Tokens;
 
 #[derive(Error, Debug)]
@@ -21,7 +21,7 @@ pub enum CompilerError {
     LexError(Tokens),
 
     #[error("encountered an error during parsing `{0}`")]
-    ParseError(#[from] ParseError)
+    ParseError(#[from] ParseError),
 }
 
 // FileReader is used to read a stream of chars from a file

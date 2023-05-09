@@ -4,7 +4,9 @@ use yapl::{compile, CompilerError};
 /// Simple tests for all examples in lang examples to make sure that everything compiles
 
 fn load_example(name: &str) -> PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR")).join("lang_examples").join(name)
+    Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("lang_examples")
+        .join(name)
 }
 
 #[test]

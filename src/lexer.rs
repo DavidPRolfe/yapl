@@ -44,28 +44,28 @@ impl<T: Iterator<Item = char>> Lexer<T> {
                     Some('=') => {
                         self.advance();
                         TokenType::LessEqual
-                    },
+                    }
                     None | Some(_) => TokenType::Less,
                 },
                 '>' => match self.peek() {
                     Some('=') => {
                         self.advance();
                         TokenType::GreaterEqual
-                    },
+                    }
                     None | Some(_) => TokenType::Greater,
                 },
                 '=' => match self.peek() {
                     Some('=') => {
                         self.advance();
                         TokenType::EqualEqual
-                    },
+                    }
                     None | Some(_) => TokenType::Equal,
                 },
                 '!' => match self.peek() {
                     Some('=') => {
                         self.advance();
                         TokenType::BangEqual
-                    },
+                    }
                     None | Some(_) => TokenType::Bang,
                 },
                 '/' => match self.peek() {

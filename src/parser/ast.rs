@@ -18,7 +18,7 @@ args           ->  expression ("," expression)*
 
 // Expressions
 expression     ->  assignment
-assignment     ->  IDENT "=" expression | logic_or // TODO: actually implement this
+assignment     ->  IDENT "=" expression | logic_or
 logic_or       ->  logic_and ( "or" logic_and )*
 logic_and      ->  equality ( "and" equality )*
 equality       ->  comparison ( ( "!=" | "==" ) comparison )*
@@ -71,8 +71,25 @@ pub struct Variable {
 
 #[derive(Debug)]
 pub enum Statement {
-    // TODO: Add other statement types
-    Expression(Expr)
+    Expression(Expr),
+    Loop(Loop),
+    Print(Print),
+    Return(Return),
+}
+
+#[derive(Debug)]
+pub struct Loop {
+    pub block: Block,
+}
+
+#[derive(Debug)]
+pub struct Print {
+    pub expr: Expr,
+}
+
+#[derive(Debug)]
+pub struct Return {
+    pub expr: Expr,
 }
 
 // Misc
@@ -140,7 +157,7 @@ pub struct EqualityRight {
 #[derive(Debug)]
 pub enum EqualityLeft {
     Comparison(Comparison),
-    Equality(Box<Equality>)
+    Equality(Box<Equality>),
 }
 
 #[derive(Debug)]
@@ -166,7 +183,7 @@ pub struct ComparisonRight {
 #[derive(Debug)]
 pub enum ComparisonLeft {
     Term(Term),
-    Comparison(Box<Comparison>)
+    Comparison(Box<Comparison>),
 }
 
 #[derive(Debug)]
@@ -190,7 +207,7 @@ pub struct TermRight {
 #[derive(Debug)]
 pub enum TermLeft {
     Factor(Factor),
-    Term(Box<Term>)
+    Term(Box<Term>),
 }
 
 #[derive(Debug)]
@@ -214,7 +231,7 @@ pub struct FactorRight {
 #[derive(Debug)]
 pub enum FactorLeft {
     Unary(Unary),
-    Factor(Box<Factor>)
+    Factor(Box<Factor>),
 }
 
 #[derive(Debug)]

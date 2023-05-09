@@ -5,8 +5,8 @@ use thiserror::Error;
 
 pub use ast::*;
 
-use crate::token::TokenType::*;
 use crate::token::TokenType::Identifier;
+use crate::token::TokenType::*;
 pub use crate::token::{Token, TokenType};
 
 /*
@@ -25,12 +25,12 @@ pub enum ParseError {
     UnexpectedToken(Token),
 
     #[error("parse error - unexpected end of file")]
-    EndOfFile
+    EndOfFile,
 }
 
 pub struct Parser<T: Iterator<Item = Token>> {
     input_iter: T,
-    held: VecDeque<Token>
+    held: VecDeque<Token>,
 }
 
 impl<T: Iterator<Item = Token>> Parser<T> {
@@ -66,13 +66,17 @@ impl<T: Iterator<Item = Token>> Parser<T> {
 
     /// Top level program parsing
     fn program(&mut self) -> Result<Program, ParseError> {
-        let mut program = Program { declarations: vec![] };
+        let mut program = Program {
+            declarations: vec![],
+        };
 
         loop {
             if let Some(token) = self.next() {
                 self.store(token);
                 program.declarations.push(self.declaration()?)
-            } else { break }
+            } else {
+                break;
+            }
         }
 
         Ok(program)
@@ -87,11 +91,11 @@ impl<T: Iterator<Item = Token>> Parser<T> {
             Fun => {
                 self.store(token);
                 Declaration::Function(self.function()?)
-            },
+            }
             Val | Var => {
                 self.store(token);
                 Declaration::Variable(self.variable()?)
-            },
+            }
             _ => {
                 self.store(token);
                 Declaration::Statement(self.statement()?)
@@ -104,13 +108,13 @@ impl<T: Iterator<Item = Token>> Parser<T> {
         let v_type = match token.token_type {
             Val => VariableType::Val,
             Var => VariableType::Var,
-            _ => return Err(ParseError::UnexpectedToken(token))
+            _ => return Err(ParseError::UnexpectedToken(token)),
         };
 
         let token = self.next().ok_or(ParseError::EndOfFile)?;
         let ident = match token.token_type {
             Identifier(s) => ast::Identifier(s),
-            _ => return Err(ParseError::UnexpectedToken(token))
+            _ => return Err(ParseError::UnexpectedToken(token)),
         };
 
         Ok(Variable {
@@ -123,18 +127,18 @@ impl<T: Iterator<Item = Token>> Parser<T> {
     fn function(&mut self) -> Result<Function, ParseError> {
         let token = self.next().ok_or(ParseError::EndOfFile)?;
         if !matches!(token.token_type, Fun) {
-            return Err(ParseError::UnexpectedToken(token))
+            return Err(ParseError::UnexpectedToken(token));
         }
 
         let token = self.next().ok_or(ParseError::EndOfFile)?;
         let ident = match token.token_type {
             Identifier(s) => ast::Identifier(s),
-            _ => return Err(ParseError::UnexpectedToken(token))
+            _ => return Err(ParseError::UnexpectedToken(token)),
         };
 
         let token = self.next().ok_or(ParseError::EndOfFile)?;
         if !matches!(token.token_type, LeftParen) {
-            return Err(ParseError::UnexpectedToken(token))
+            return Err(ParseError::UnexpectedToken(token));
         }
 
         let token = self.next().ok_or(ParseError::EndOfFile)?;
@@ -146,35 +150,35 @@ impl<T: Iterator<Item = Token>> Parser<T> {
 
                 let token = self.next().ok_or(ParseError::EndOfFile)?;
                 if !matches!(token.token_type, RightParen) {
-                    return Err(ParseError::UnexpectedToken(token))
+                    return Err(ParseError::UnexpectedToken(token));
                 }
                 Some(args)
             }
         };
 
-        Ok(Function { ident, args, block: self.block()? })
+        Ok(Function {
+            ident,
+            args,
+            block: self.block()?,
+        })
     }
 
     fn statement(&mut self) -> Result<Statement, ParseError> {
         let token = self.next().ok_or(ParseError::EndOfFile)?;
 
-        Ok(match token.token_type { // TODO: add the rest
+        Ok(match token.token_type {
             Loop => {
                 self.store(token);
-                unimplemented!("Haven't added loops")
-            },
-            For => {
-                self.store(token);
-                unimplemented!("haven't added for loops")
-            },
+                Statement::Loop(self.loop_stmt()?)
+            }
             Print => {
                 self.store(token);
-                unimplemented!("haven't added print")
-            },
+                Statement::Print(self.print_stmt()?)
+            }
             Return => {
                 self.store(token);
-                unimplemented!("haven't added returns")
-            },
+                Statement::Return(self.return_stmt()?)
+            }
             _ => {
                 self.store(token);
                 Statement::Expression(self.expr()?)
@@ -182,25 +186,70 @@ impl<T: Iterator<Item = Token>> Parser<T> {
         })
     }
 
+    fn loop_stmt(&mut self) -> Result<ast::Loop, ParseError> {
+        let token = self.next().ok_or(ParseError::EndOfFile)?;
+        if !matches!(token.token_type, Loop) {
+            return Err(ParseError::UnexpectedToken(token));
+        }
+
+        Ok(ast::Loop {
+            block: self.block()?,
+        })
+    }
+
+    fn print_stmt(&mut self) -> Result<ast::Print, ParseError> {
+        let token = self.next().ok_or(ParseError::EndOfFile)?;
+        if !matches!(token.token_type, Print) {
+            return Err(ParseError::UnexpectedToken(token));
+        }
+
+        let token = self.next().ok_or(ParseError::EndOfFile)?;
+        if !matches!(token.token_type, LeftParen) {
+            return Err(ParseError::UnexpectedToken(token));
+        }
+
+        let expr = self.expr()?;
+
+        let token = self.next().ok_or(ParseError::EndOfFile)?;
+        if !matches!(token.token_type, RightParen) {
+            return Err(ParseError::UnexpectedToken(token));
+        }
+
+        Ok(ast::Print { expr })
+    }
+
+    fn return_stmt(&mut self) -> Result<ast::Return, ParseError> {
+        let token = self.next().ok_or(ParseError::EndOfFile)?;
+        if !matches!(token.token_type, Return) {
+            return Err(ParseError::UnexpectedToken(token));
+        }
+
+        Ok(ast::Return { expr: self.expr()? })
+    }
+
     // Misc
 
     fn block(&mut self) -> Result<Block, ParseError> {
         let token = self.next().ok_or(ParseError::EndOfFile)?;
         if !matches!(token.token_type, LeftBrace) {
-            return Err(ParseError::UnexpectedToken(token))
+            return Err(ParseError::UnexpectedToken(token));
         }
 
-        let mut block = Block { declarations: vec![] };
+        let mut block = Block {
+            declarations: vec![],
+        };
 
         loop {
             if let Some(token) = self.next() {
                 if matches!(token.token_type, RightBrace) {
-                    break
+                    break;
                 }
 
                 self.store(token);
                 block.declarations.push(self.declaration()?)
-            } else { break }
+            } else {
+                break;
+            }
         }
 
         Ok(block)
@@ -211,27 +260,31 @@ impl<T: Iterator<Item = Token>> Parser<T> {
         let arg = if let Identifier(ident) = token.token_type {
             ident
         } else {
-            return Err(ParseError::UnexpectedToken(token))
+            return Err(ParseError::UnexpectedToken(token));
         };
 
-        let mut args = ArgsDecl { args: vec![ast::Identifier(arg)] };
+        let mut args = ArgsDecl {
+            args: vec![ast::Identifier(arg)],
+        };
 
         loop {
             if let Some(token) = self.next() {
                 if !matches!(token.token_type, Comma) {
                     self.store(token);
-                    break
+                    break;
                 }
 
                 let token = self.next().ok_or(ParseError::EndOfFile)?;
                 let arg = if let Identifier(ident) = token.token_type {
                     ident
                 } else {
-                    return Err(ParseError::UnexpectedToken(token))
+                    return Err(ParseError::UnexpectedToken(token));
                 };
 
                 args.args.push(ast::Identifier(arg))
-            } else { break }
+            } else {
+                break;
+            }
         }
 
         Ok(args)
@@ -248,7 +301,10 @@ impl<T: Iterator<Item = Token>> Parser<T> {
         let assignment = if let Identifier(ident) = token.token_type.clone() {
             let token2 = self.next().ok_or(ParseError::EndOfFile)?;
             if matches!(token2.token_type, Equal) {
-                Assignment::AssignedVal(AssignedVal { ident: ast::Identifier(ident), expr: Box::new(self.expr()?) })
+                Assignment::AssignedVal(AssignedVal {
+                    ident: ast::Identifier(ident),
+                    expr: Box::new(self.expr()?),
+                })
             } else {
                 self.store(token);
                 self.store(token2);
@@ -271,14 +327,14 @@ impl<T: Iterator<Item = Token>> Parser<T> {
 
             if let Some(token) = self.next() {
                 match token.token_type {
-                    And => {},
+                    And => {}
                     _ => {
                         self.store(token);
-                        break
+                        break;
                     }
                 }
             } else {
-                break
+                break;
             }
 
             right = Some(self.logic_and()?);
@@ -297,14 +353,14 @@ impl<T: Iterator<Item = Token>> Parser<T> {
 
             if let Some(token) = self.next() {
                 match token.token_type {
-                    And => {},
+                    And => {}
                     _ => {
                         self.store(token);
-                        break
+                        break;
                     }
                 }
             } else {
-                break
+                break;
             }
 
             right = Some(self.equality()?);
@@ -323,7 +379,7 @@ impl<T: Iterator<Item = Token>> Parser<T> {
 
             let token = match self.next() {
                 None => break,
-                Some(t) => t
+                Some(t) => t,
             };
 
             let op = match token.token_type {
@@ -331,12 +387,15 @@ impl<T: Iterator<Item = Token>> Parser<T> {
                 BangEqual => EqualityOp::NotEqual,
                 _ => {
                     self.store(token);
-                    break
+                    break;
                 }
             };
 
-            right = Some(EqualityRight { op, right: self.comparison()? });
-            left = EqualityLeft::Equality( Box::new(Equality {left, right }) );
+            right = Some(EqualityRight {
+                op,
+                right: self.comparison()?,
+            });
+            left = EqualityLeft::Equality(Box::new(Equality { left, right }));
         }
 
         Ok(Equality { left, right })
@@ -351,7 +410,7 @@ impl<T: Iterator<Item = Token>> Parser<T> {
 
             let token = match self.next() {
                 None => break,
-                Some(t) => t
+                Some(t) => t,
             };
 
             let op = match token.token_type {
@@ -361,12 +420,15 @@ impl<T: Iterator<Item = Token>> Parser<T> {
                 LessEqual => ComparisonOp::LessEqual,
                 _ => {
                     self.store(token);
-                    break
+                    break;
                 }
             };
 
-            right = Some(ComparisonRight { op, right: self.term()? });
-            left = ComparisonLeft::Comparison( Box::new(Comparison {left, right }) );
+            right = Some(ComparisonRight {
+                op,
+                right: self.term()?,
+            });
+            left = ComparisonLeft::Comparison(Box::new(Comparison { left, right }));
         }
 
         Ok(Comparison { left, right })
@@ -381,7 +443,7 @@ impl<T: Iterator<Item = Token>> Parser<T> {
 
             let token = match self.next() {
                 None => break,
-                Some(t) => t
+                Some(t) => t,
             };
 
             let op = match token.token_type {
@@ -389,12 +451,15 @@ impl<T: Iterator<Item = Token>> Parser<T> {
                 Plus => TermOp::Plus,
                 _ => {
                     self.store(token);
-                    break
+                    break;
                 }
             };
 
-            right = Some(TermRight { op, right: self.factor()? });
-            left = TermLeft::Term( Box::new(Term {left, right }) );
+            right = Some(TermRight {
+                op,
+                right: self.factor()?,
+            });
+            left = TermLeft::Term(Box::new(Term { left, right }));
         }
 
         Ok(Term { left, right })
@@ -409,7 +474,7 @@ impl<T: Iterator<Item = Token>> Parser<T> {
 
             let token = match self.next() {
                 None => break,
-                Some(t) => t
+                Some(t) => t,
             };
 
             let op = match token.token_type {
@@ -417,12 +482,15 @@ impl<T: Iterator<Item = Token>> Parser<T> {
                 Star => FactorOp::Mult,
                 _ => {
                     self.store(token);
-                    break
+                    break;
                 }
             };
 
-            right = Some(FactorRight { op, right: self.unary()? });
-            left = FactorLeft::Factor( Box::new(Factor {left, right }) );
+            right = Some(FactorRight {
+                op,
+                right: self.unary()?,
+            });
+            left = FactorLeft::Factor(Box::new(Factor { left, right }));
         }
 
         Ok(Factor { left, right })
@@ -437,9 +505,11 @@ impl<T: Iterator<Item = Token>> Parser<T> {
         match token.token_type {
             Bang => op = Some(UnaryOp::Not),
             Minus => op = Some(UnaryOp::Minus),
-            _ => matched = {
-                self.store(token);
-                false
+            _ => {
+                matched = {
+                    self.store(token);
+                    false
+                }
             }
         }
 
@@ -451,7 +521,7 @@ impl<T: Iterator<Item = Token>> Parser<T> {
             right = Box::new(UnaryRight::Primary(self.primary()?))
         }
 
-        Ok(Unary{ op, right })
+        Ok(Unary { op, right })
     }
 
     fn primary(&mut self) -> Result<Primary, ParseError> {
@@ -469,7 +539,7 @@ impl<T: Iterator<Item = Token>> Parser<T> {
                 let right = self.next().ok_or(ParseError::EndOfFile)?;
                 match right.token_type {
                     RightParen => Ok(Primary::Grouping(expr)),
-                    _ => Err(ParseError::UnexpectedToken(right))
+                    _ => Err(ParseError::UnexpectedToken(right)),
                 }
             }
             _ => Err(ParseError::UnexpectedToken(token)),

@@ -74,7 +74,7 @@ impl fmt::Display for Token {
 // This exists to make displaying tokens easier
 #[derive(Debug)]
 pub struct Tokens {
-    tokens: Vec<Token>
+    tokens: Vec<Token>,
 }
 
 impl fmt::Display for Tokens {
