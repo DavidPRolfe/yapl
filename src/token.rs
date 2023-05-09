@@ -38,6 +38,7 @@ pub enum TokenType {
 
     // Keywords
     Fun,
+    For,
     Loop,
     If,
     Else,

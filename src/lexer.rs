@@ -178,6 +178,7 @@ impl<T: Iterator<Item = char>> Lexer<T> {
             "true" => TokenType::True,
             "false" => TokenType::False,
             "fun" => TokenType::Fun,
+            "for" => TokenType::For,
             "loop" => TokenType::Loop,
             "if" => TokenType::If,
             "else" => TokenType::Else,

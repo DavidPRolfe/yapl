@@ -5,6 +5,7 @@ use thiserror::Error;
 pub use ast::*;
 
 use crate::token::TokenType::*;
+use crate::token::TokenType::Identifier;
 pub use crate::token::{Token, TokenType};
 
 /*
@@ -35,16 +36,16 @@ impl<T: Iterator<Item = Token>> Parser<T> {
     pub fn new(iter: T) -> Self {
         Self {
             input_iter: iter,
-            held: None
+            held: None,
         }
     }
 
-    // Parses the input and returns the resulting ast.
-    pub fn parse(&mut self) -> Result<Expr, ParseError> {
-        self.expr()
+    /// Parses the input and returns the resulting ast.
+    pub fn parse(&mut self) -> Result<Program, ParseError> {
+        self.program()
     }
 
-    // Grabs the held token if available or the next token from the input
+    /// Grabs the held token if available or the next token from the input
     fn next(&mut self) -> Option<Token> {
         if let Some(token) = self.held.take() {
             return Some(token);
@@ -53,10 +54,146 @@ impl<T: Iterator<Item = Token>> Parser<T> {
         self.input_iter.next()
     }
 
-    // Stores a token for a following call to next
+    /// Stores a token for a following call to next
     fn store(&mut self, token: Token) {
         self.held = Some(token);
     }
+
+    // Parsing rules
+    fn program(&mut self) -> Result<Program, ParseError> {
+        let mut program = Program { declarations: vec![] };
+
+        loop {
+            if let Some(token) = self.next() {
+                self.store(token);
+                program.declarations.push(self.declaration()?)
+            } else { break }
+        }
+
+        Ok(program)
+    }
+
+    // Declarations
+
+    fn declaration(&mut self) -> Result<Declaration, ParseError> {
+        let token = self.next().ok_or(ParseError::EndOfFile)?;
+
+        Ok(match token.token_type {
+            Fun => {
+                self.store(token);
+                Declaration::Function(self.function()?)
+            },
+            Val | Var => {
+                self.store(token);
+                Declaration::Variable(self.variable()?)
+            },
+            _ => {
+                self.store(token);
+                Declaration::Statement(self.statement()?)
+            }
+        })
+    }
+
+    fn variable(&mut self) -> Result<Variable, ParseError> {
+        let token = self.next().ok_or(ParseError::EndOfFile)?;
+        let v_type = match token.token_type {
+            Val => VariableType::Val,
+            Var => VariableType::Var,
+            _ => return Err(ParseError::UnexpectedToken(token))
+        };
+
+        let token = self.next().ok_or(ParseError::EndOfFile)?;
+        let ident = match token.token_type {
+            Identifier(s) => ast::Identifier(s),
+            _ => return Err(ParseError::UnexpectedToken(token))
+        };
+
+        Ok(Variable {
+            v_type,
+            ident,
+            value: self.expr()?,
+        })
+    }
+
+    fn function(&mut self) -> Result<Function, ParseError> {
+        let token = self.next().ok_or(ParseError::EndOfFile)?;
+        if !matches!(token.token_type, Fun) {
+            return Err(ParseError::UnexpectedToken(token))
+        }
+
+        let token = self.next().ok_or(ParseError::EndOfFile)?;
+        let ident = match token.token_type {
+            Identifier(s) => ast::Identifier(s),
+            _ => return Err(ParseError::UnexpectedToken(token))
+        };
+
+        let token = self.next().ok_or(ParseError::EndOfFile)?;
+        if !matches!(token.token_type, LeftParen) {
+            return Err(ParseError::UnexpectedToken(token))
+        }
+
+        // TODO: Add arg handling
+
+        let token = self.next().ok_or(ParseError::EndOfFile)?;
+        if !matches!(token.token_type, RightParen) {
+            return Err(ParseError::UnexpectedToken(token))
+        }
+
+        Ok(Function { ident, block: self.block()? })
+    }
+
+    fn statement(&mut self) -> Result<Statement, ParseError> {
+        let token = self.next().ok_or(ParseError::EndOfFile)?;
+
+        Ok(match token.token_type { // TODO: add the rest
+            Loop => {
+                self.store(token);
+                unimplemented!("Haven't added loops")
+            },
+            For => {
+                self.store(token);
+                unimplemented!("haven't added for loops")
+            },
+            Print => {
+                self.store(token);
+                unimplemented!("haven't added print")
+            },
+            Return => {
+                self.store(token);
+                unimplemented!("haven't added returns")
+            },
+            _ => {
+                self.store(token);
+                Statement::Expression(self.expr()?)
+            }
+        })
+    }
+
+    // Misc
+
+    fn block(&mut self) -> Result<Block, ParseError> {
+        let token = self.next().ok_or(ParseError::EndOfFile)?;
+        if !matches!(token.token_type, LeftBrace) {
+            return Err(ParseError::UnexpectedToken(token))
+        }
+
+        let mut block = Block { declarations: vec![] };
+
+        loop {
+            if let Some(token) = self.next() {
+                if matches!(token.token_type, RightBrace) {
+                    break
+                }
+
+                self.store(token);
+                block.declarations.push(self.declaration()?)
+            } else { break }
+        }
+
+        Ok(block)
+    }
+
+    // Expressions
 
     fn expr(&mut self) -> Result<Expr, ParseError> {
         Ok(Expr::LogicOr(self.logic_or()?))
@@ -263,7 +400,7 @@ impl<T: Iterator<Item = Token>> Parser<T> {
             String(lit) => Ok(Primary::String(lit)),
             True => Ok(Primary::True),
             False => Ok(Primary::False),
-            Identifier(lit) => Ok(Primary::Identifier(lit)),
+            Identifier(lit) => Ok(Primary::Identifier(ast::Identifier(lit))),
             LeftParen => {
                 let expr = self.expr()?;
                 let right = self.next().ok_or(ParseError::EndOfFile)?;

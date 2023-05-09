@@ -1,22 +1,78 @@
 /*
 planning out future of ast
 
-program        →
-function       → FUN IDENTIFIER "()" block ; // TODO: Can't handle args or multiple funs
-block          → "{" statement* "}" ;
-statement      → ( assignment | expression ) SEMICOLON+
-assignment     →
-expression     → equality ;
-logic_or       → logic_and ( "or" logic_and )* ;
-logic_and      → equality ( "and" equality )* ;
-equality       → comparison ( ( "!=" | "==" ) comparison )* ;
-comparison     → term ( ( ">" | ">=" | "<" | "<=" ) term )* ;
-term           → factor ( ( "-" | "+" ) factor )* ;
-factor         → unary ( ( "/" | "*" ) unary )* ;
-unary          → ( "!" | "-" ) unary | primary ;
-primary        → INT | FLOAT | STRING | reference | "true" | "false" | "(" expression ")" ;
-reference      → IDENT | IDENT"()" # TODO: Need to implement references and function args
+program        ->  declaration* EOF
+
+declaration    ->  function | var | statement
+function       ->  FUN IDENTIFIER "()" block   // TODO: Can't handle args or multiple funs
+var            ->  ( "val" | "var" ) IDENT "=" expression ";"*
+statement      ->  expression | for | loop | print | return
+
+// Misc
+block          ->  "{" declaration* "}"
+
+// Expressions
+expression     ->  assignment ";"*
+assignment     ->  IDENT "=" logic_or | logic_or
+logic_or       ->  logic_and ( "or" logic_and )*
+logic_and      ->  equality ( "and" equality )*
+equality       ->  comparison ( ( "!=" | "==" ) comparison )*
+comparison     ->  term ( ( ">" | ">=" | "<" | "<=" ) term )*
+term           ->  factor ( ( "-" | "+" ) factor )*
+factor         ->  unary ( ( "/" | "*" ) unary )*
+unary          ->  ( "!" | "-" ) unary | primary
+primary        ->  INT | FLOAT | STRING | call | "true" | "false" | "(" expression ")"
+call           ->  IDENT"()" | IDENT # TODO: Need to implement function args
  */
+
+// Declarations
+
+#[derive(Debug)]
+pub struct Program {
+    pub declarations: Vec<Declaration>,
+}
+
+#[derive(Debug)]
+pub enum Declaration {
+    Variable(Variable),
+    Statement(Statement),
+    Function(Function),
+}
+
+#[derive(Debug)]
+pub struct Function {
+    // TODO: Add args
+    pub ident: Identifier,
+    pub block: Block,
+}
+
+#[derive(Debug)]
+pub enum VariableType {
+    Var,
+    Val,
+}
+
+#[derive(Debug)]
+pub struct Variable {
+    pub v_type: VariableType,
+    pub ident: Identifier,
+    pub value: Expr,
+}
+
+#[derive(Debug)]
+pub enum Statement {
+    // TODO: Add other statement types
+    Expression(Expr)
+}
+
+// Misc
+
+#[derive(Debug)]
+pub struct Block {
+    pub declarations: Vec<Declaration>,
+}
+
+// Expressions
 
 #[derive(Debug)]
 pub enum Expr {
@@ -168,8 +224,11 @@ pub enum Primary {
     Int(String),
     Float(String),
     String(String),
-    Identifier(String),
+    Identifier(Identifier),
     True,
     False,
     Grouping(Expr),
 }
+
+#[derive(Debug)]
+pub struct Identifier(pub String);
