@@ -179,6 +179,10 @@ impl<T: Iterator<Item = Token>> Parser<T> {
                 self.store(token);
                 Statement::Return(self.return_stmt()?)
             }
+            If => {
+                self.store(token);
+                Statement::If(self.if_stmt()?)
+            }
             _ => {
                 self.store(token);
                 Statement::Expression(self.expr()?)
@@ -225,6 +229,30 @@ impl<T: Iterator<Item = Token>> Parser<T> {
         }
 
         Ok(ast::Return { expr: self.expr()? })
+    }
+
+    fn if_stmt(&mut self) -> Result<ast::If, ParseError> {
+        let token = self.next().ok_or(ParseError::EndOfFile)?;
+        if !matches!(token.token_type, If) {
+            return Err(ParseError::UnexpectedToken(token));
+        }
+
+        let expr = self.expr()?;
+        let block = self.block()?;
+
+        let token = self.next().ok_or(ParseError::EndOfFile)?;
+        let else_block = if matches!(token.token_type, Else) {
+            Some(self.block()?)
+        } else {
+            self.store(token);
+            None
+        };
+
+        Ok(ast::If {
+            expr,
+            block,
+            else_block,
+        })
     }
 
     // Misc

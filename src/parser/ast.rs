@@ -6,10 +6,11 @@ program        ->  declaration* EOF
 declaration    ->  function | var | statement
 function       ->  FUN IDENTIFIER "(" arg_decl? ")" block
 var            ->  ( "val" | "var" ) IDENT "=" expression ";"*
-statement      ->  loop | print | return | expression
+statement      ->  loop | print | return | if | expression
 loop           ->  "loop" block
 print          ->  "print(" expression ")"
 return         ->  "return" expression
+if             -> "if" expression block ("else" block)?
 
 // Misc
 block          ->  "{" declaration* "}"
@@ -75,6 +76,7 @@ pub enum Statement {
     Loop(Loop),
     Print(Print),
     Return(Return),
+    If(If),
 }
 
 #[derive(Debug)]
@@ -90,6 +92,13 @@ pub struct Print {
 #[derive(Debug)]
 pub struct Return {
     pub expr: Expr,
+}
+
+#[derive(Debug)]
+pub struct If {
+    pub expr: Expr,
+    pub block: Block,
+    pub else_block: Option<Block>,
 }
 
 // Misc
