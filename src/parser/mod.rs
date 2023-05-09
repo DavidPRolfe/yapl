@@ -1,5 +1,6 @@
 mod ast;
 
+use std::collections::VecDeque;
 use thiserror::Error;
 
 pub use ast::*;
@@ -29,25 +30,20 @@ pub enum ParseError {
 
 pub struct Parser<T: Iterator<Item = Token>> {
     input_iter: T,
-    held: Option<Token>
+    held: VecDeque<Token>
 }
 
 impl<T: Iterator<Item = Token>> Parser<T> {
     pub fn new(iter: T) -> Self {
         Self {
             input_iter: iter,
-            held: None,
+            held: VecDeque::new(),
         }
-    }
-
-    /// Parses the input and returns the resulting ast.
-    pub fn parse(&mut self) -> Result<Program, ParseError> {
-        self.program()
     }
 
     /// Grabs the held token if available or the next token from the input
     fn next(&mut self) -> Option<Token> {
-        if let Some(token) = self.held.take() {
+        if let Some(token) = self.held.pop_front() {
             return Some(token);
         }
 
@@ -55,11 +51,20 @@ impl<T: Iterator<Item = Token>> Parser<T> {
     }
 
     /// Stores a token for a following call to next
+    ///
+    /// This operates in a FIFO manner when called multiple times.
     fn store(&mut self, token: Token) {
-        self.held = Some(token);
+        self.held.push_back(token);
+    }
+
+    /// Parses the input and returns the resulting ast.
+    pub fn parse(&mut self) -> Result<Program, ParseError> {
+        self.program()
     }
 
     // Parsing rules
+
+    /// Top level program parsing
     fn program(&mut self) -> Result<Program, ParseError> {
         let mut program = Program { declarations: vec![] };
 
@@ -235,7 +240,26 @@ impl<T: Iterator<Item = Token>> Parser<T> {
     // Expressions
 
     fn expr(&mut self) -> Result<Expr, ParseError> {
-        Ok(Expr::LogicOr(self.logic_or()?))
+        Ok(Expr::Assignment(self.assignment()?))
+    }
+
+    fn assignment(&mut self) -> Result<Assignment, ParseError> {
+        let token = self.next().ok_or(ParseError::EndOfFile)?;
+        let assignment = if let Identifier(ident) = token.token_type.clone() {
+            let token2 = self.next().ok_or(ParseError::EndOfFile)?;
+            if matches!(token2.token_type, Equal) {
+                Assignment::AssignedVal(AssignedVal { ident: ast::Identifier(ident), expr: Box::new(self.expr()?) })
+            } else {
+                self.store(token);
+                self.store(token2);
+                Assignment::LogicOr(self.logic_or()?)
+            }
+        } else {
+            self.store(token);
+            Assignment::LogicOr(self.logic_or()?)
+        };
+
+        Ok(assignment)
     }
 
     fn logic_or(&mut self) -> Result<LogicOr, ParseError> {

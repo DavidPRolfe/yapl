@@ -6,7 +6,10 @@ program        ->  declaration* EOF
 declaration    ->  function | var | statement
 function       ->  FUN IDENTIFIER "(" arg_decl? ")" block
 var            ->  ( "val" | "var" ) IDENT "=" expression ";"*
-statement      ->  expression | for | loop | print | return
+statement      ->  loop | print | return | expression
+loop           ->  "loop" block
+print          ->  "print(" expression ")"
+return         ->  "return" expression
 
 // Misc
 block          ->  "{" declaration* "}"
@@ -14,8 +17,8 @@ args_decl      ->  IDENT ("," IDENT )*
 args           ->  expression ("," expression)*
 
 // Expressions
-expression     ->  assignment ";"*
-assignment     ->  IDENT "=" logic_or | logic_or
+expression     ->  assignment
+assignment     ->  IDENT "=" expression | logic_or // TODO: actually implement this
 logic_or       ->  logic_and ( "or" logic_and )*
 logic_and      ->  equality ( "and" equality )*
 equality       ->  comparison ( ( "!=" | "==" ) comparison )*
@@ -24,7 +27,7 @@ term           ->  factor ( ( "-" | "+" ) factor )*
 factor         ->  unary ( ( "/" | "*" ) unary )*
 unary          ->  ( "!" | "-" ) unary | primary
 primary        ->  INT | FLOAT | STRING | call | "true" | "false" | "(" expression ")"
-call           ->  IDENT"(" args? ")" | IDENT # TODO: Need to implement call args
+call           ->  IDENT"(" args? ")" | IDENT // TODO: Need to implement call args
  */
 
 // Declarations
@@ -83,6 +86,18 @@ pub struct Block {
 
 #[derive(Debug)]
 pub enum Expr {
+    Assignment(Assignment),
+}
+
+#[derive(Debug)]
+pub struct AssignedVal {
+    pub ident: Identifier,
+    pub expr: Box<Expr>,
+}
+
+#[derive(Debug)]
+pub enum Assignment {
+    AssignedVal(AssignedVal),
     LogicOr(LogicOr),
 }
 
