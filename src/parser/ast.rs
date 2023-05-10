@@ -1,11 +1,9 @@
 /*
-planning out future of ast
-
 program        ->  declaration* EOF
 
 declaration    ->  function | var | statement
 function       ->  FUN IDENTIFIER "(" arg_decl? ")" block
-var            ->  ( "val" | "var" ) IDENT "=" expression ";"*
+var            ->  ( "val" | "var" ) IDENT "=" expression
 statement      ->  loop | print | return | if | expression
 loop           ->  "loop" block
 print          ->  "print(" expression ")"

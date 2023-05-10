@@ -9,6 +9,9 @@ edition = "2018"
 [[bin]]
 name = "yapl"
 
+[env]
+RUST_BACKTRACE = 1
+
 [dependencies]
-thiserror = "1.0.23"
+snafu = "0.7.4"
 utf8-decode = "1.0.0"

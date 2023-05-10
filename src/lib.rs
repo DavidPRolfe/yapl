@@ -2,7 +2,7 @@ use std::fs::File;
 use std::io::{Bytes, Read};
 use utf8_decode::UnsafeDecoder;
 
-use thiserror::Error;
+use snafu::prelude::*;
 
 mod lexer;
 mod parser;
@@ -12,16 +12,21 @@ use lexer::Lexer;
 use parser::{ParseError, Parser};
 use token::Tokens;
 
-#[derive(Error, Debug)]
+#[derive(Debug, Snafu)]
 pub enum CompilerError {
-    #[error(transparent)]
-    ReadError(#[from] std::io::Error),
+    ReadError {
+        source: std::io::Error,
+    },
 
-    #[error("encountered errors during lexing `{0}`")]
-    LexError(Tokens),
+    #[snafu(display("encountered errors during lexing `{tokens}`"))]
+    LexError {
+        tokens: Tokens,
+    },
 
-    #[error("encountered an error during parsing `{0}`")]
-    ParseError(#[from] ParseError),
+    #[snafu(display("encountered an error during parsing `{err}`"))]
+    ParseError {
+        err: ParseError,
+    },
 }
 
 // FileReader is used to read a stream of chars from a file
@@ -57,11 +62,14 @@ impl Iterator for &mut FileReader {
 }
 
 pub fn compile(path: &str) -> Result<(), CompilerError> {
-    let mut reader = FileReader::open(&path)?;
+    let mut reader =
+        FileReader::open(&path).map_err(|err| CompilerError::ReadError { source: err })?;
 
     let lexer = Lexer::new(&mut reader);
 
-    let ast = Parser::new(lexer).parse()?;
+    let ast = Parser::new(lexer)
+        .parse()
+        .map_err(|err| CompilerError::ParseError { err })?;
 
     print!("{:?}", ast);
 

@@ -1,22 +1,26 @@
 fun main() {
-    num = 7
-    unused = 14.0
-    secondUnused = 23.
-    third_unused = 19f
+    var num = 7
+    val unused = 14.0
+    val secondUnused = 23.
+    var third_unused = 19f
 
-    factorial = 1
+    var factorial = 1
 
     // check if the number is negative, positive or zero
     if num < 0 {
         print("Sorry, factorial does not exist for negative numbers")
-    } else if num == 0 {
-        print("The factorial of 0 is 1")
     } else {
-        i = 1
+        if num == 0 {
+            print("The factorial of 0 is 1")
+            return
+        }
+
+        var i = 1
         loop {
             if i >= num + 1 {
                 break
             } else {
+                i = i + 1
                 factorial = factorial * i
             }
         }
